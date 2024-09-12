@@ -93,4 +93,7 @@ def get_evaluacion():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Obtén el puerto de la variable de entorno
+    port = int(os.environ.get("PORT", 5000))
+    # Escucha en todas las interfaces de red
+    app.run(host='0.0.0.0', port=port, debug=True)
