@@ -1,15 +1,19 @@
+import os
 from flask import Flask, request, jsonify
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Configuración de Flask
 app = Flask(__name__)
+
+# Usar el archivo de secretos en Render
+credentials_path = "/etc/secrets/credentials.json"
 
 # Configuración para la autenticación de Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
 gc = gspread.authorize(creds)
+
 
 # Definición de la función de procesamiento de datos
 def personalgrupo(mes):
