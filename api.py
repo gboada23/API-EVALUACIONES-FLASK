@@ -14,20 +14,20 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
 gc = gspread.authorize(creds)
 
-
 # Definición de la función de procesamiento de datos
-def personalgrupo(mes):
+def personalgrupo(mes, ano):
     # Abrimos la hoja de Google y cargamos los datos
     grupo = gc.open('GRUPO DE EMPRESAS NUEVA').worksheet('EVALUACIONES')
     datos = grupo.get_all_records()
     datos = pd.DataFrame(datos)
 
-    # Formateamos la fecha y extraemos el mes
+    # Formateamos la fecha y extraemos el mes y año
     datos['FECHA'] = pd.to_datetime(datos['FECHA'], format='%d/%m/%Y')
     datos['MES'] = datos['FECHA'].dt.month
+    datos['ANO'] = datos['FECHA'].dt.year
 
-    # Filtramos los datos para el mes solicitado
-    mes = datos[datos['MES'] == mes].copy()
+    # Filtramos los datos para el mes y año solicitados
+    mes = datos[(datos['MES'] == mes) & (datos['ANO'] == ano)].copy()
 
     # Calculamos los porcentajes de cada columna de evaluación
     mes['cumplimiento_horario_pct'] = mes["CUMPLIENTO DE HORARIO"] / 4
@@ -37,17 +37,17 @@ def personalgrupo(mes):
 
     # Calculamos el resultado promedio global usando los valores normalizados
     mes['Resultado final'] = (mes['cumplimiento_horario_pct'] +
-                         mes['discrecion_politicas_pct'] +
-                         mes['clima_organizacional_pct'] +
-                         mes['cumplimiento_actividades_pct']) / 4
+                              mes['discrecion_politicas_pct'] +
+                              mes['clima_organizacional_pct'] +
+                              mes['cumplimiento_actividades_pct']) / 4
 
     # Agrupamos los resultados por el personal y calculamos el promedio
     mes = mes.groupby('PERSONAL')[["PERSONAL",
-                                 "cumplimiento_horario_pct",
-                                 "discrecion_politicas_pct",
-                                 "clima_organizacional_pct",
-                                 "cumplimiento_actividades_pct",
-                                 "Resultado final"]].mean(numeric_only=True).reset_index()
+                                   "cumplimiento_horario_pct",
+                                   "discrecion_politicas_pct",
+                                   "clima_organizacional_pct",
+                                   "cumplimiento_actividades_pct",
+                                   "Resultado final"]].mean(numeric_only=True).reset_index()
 
     # Cargamos la lista del personal
     personal = gc.open('GRUPO DE EMPRESAS NUEVA').worksheet('LISTADO DEL PERSONAL')
@@ -67,27 +67,31 @@ def personalgrupo(mes):
 
 @app.route('/')
 def home():
-    return "API de Evaluaciones: usa la ruta /evaluacion?mes=<numero_mes> para obtener los datos."
+    return "API de Evaluaciones: usa la ruta /evaluacion?mes=<numero_mes>&ano=<numero_ano> para obtener los datos."
 
 # Crear un endpoint para la API
 @app.route('/evaluacion', methods=['GET'])
 def get_evaluacion():
-    # Obtener el parámetro de mes de la URL
+    # Obtener los parámetros de mes y año de la URL
     mes = request.args.get('mes')
+    ano = request.args.get('ano')
     
-    # Validar el parámetro de mes
-    if not mes:
-        return jsonify({"error": "El parámetro 'mes' es requerido."}), 400
+    # Validar los parámetros de mes y año
+    if not mes or not ano:
+        return jsonify({"error": "Los parámetros 'mes' y 'ano' son requeridos."}), 400
     try:
         mes = int(mes)
+        ano = int(ano)
         if mes < 1 or mes > 12:
             return jsonify({"error": "El mes debe estar entre 1 y 12."}), 400
+        if ano < 2024 or ano > 2026:  # Ajusta el rango de años según sea necesario
+            return jsonify({"error": "El año debe ser un valor razonable."}), 400
     except ValueError:
-        return jsonify({"error": "El parámetro 'mes' debe ser un número entero."}), 400
+        return jsonify({"error": "Los parámetros 'mes' y 'ano' deben ser números enteros."}), 400
 
     # Obtener los datos filtrados
     try:
-        resultado = personalgrupo(mes)
+        resultado = personalgrupo(mes, ano)
         return jsonify(resultado.to_dict(orient='records'))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
