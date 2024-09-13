@@ -7,11 +7,11 @@ from oauth2client.service_account import ServiceAccountCredentials
 app = Flask(__name__)
 
 # Usar el archivo de secretos en Render
-credentials_path = "/etc/secrets/credentials.json"
+#credentials_path = "/etc/secrets/credentials.json"
 
 # Configuración para la autenticación de Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
 gc = gspread.authorize(creds)
 
 # Definición de la función de procesamiento de datos
@@ -36,7 +36,7 @@ def personalgrupo(mes, ano):
     mes['cumplimiento_actividades_pct'] = mes["CUMPLIMIENTO DE ACTIVIDADES "] / 4
 
     # Calculamos el resultado promedio global usando los valores normalizados
-    mes['Resultado final'] = (mes['cumplimiento_horario_pct'] +
+    mes['RESULTADO EVALUACION'] = (mes['cumplimiento_horario_pct'] +
                               mes['discrecion_politicas_pct'] +
                               mes['clima_organizacional_pct'] +
                               mes['cumplimiento_actividades_pct']) / 4
@@ -47,7 +47,7 @@ def personalgrupo(mes, ano):
                                    "discrecion_politicas_pct",
                                    "clima_organizacional_pct",
                                    "cumplimiento_actividades_pct",
-                                   "Resultado final"]].mean(numeric_only=True).reset_index()
+                                   "RESULTADO EVALUACION"]].mean(numeric_only=True).reset_index()
 
     # Cargamos la lista del personal
     personal = gc.open('GRUPO DE EMPRESAS NUEVA').worksheet('LISTADO DEL PERSONAL')
@@ -60,9 +60,9 @@ def personalgrupo(mes, ano):
     merge = pd.merge(personal, mes, on="PERSONAL", how="inner")
     merge = merge.sort_values(by='PERSONAL', ascending=True)
     merge = merge.round(2)
-    columnas = ['cumplimiento_horario_pct', 'discrecion_politicas_pct', 'clima_organizacional_pct', 'cumplimiento_actividades_pct', 'Resultado final']
-    for columna in columnas:
-        merge[columna] = merge[columna].apply(lambda x: f'{x * 100}'.replace('.', ',') + '%')
+    columnas = ['cumplimiento_horario_pct', 'discrecion_politicas_pct', 'clima_organizacional_pct', 'cumplimiento_actividades_pct']
+    merge = merge.drop(columnas,axis=1)
+    merge['RESULTADO EVALUACION'] = merge['RESULTADO EVALUACION'].apply(lambda x: f'{x * 100}'.replace('.', ',') + '%')
     return merge
 
 @app.route('/')
