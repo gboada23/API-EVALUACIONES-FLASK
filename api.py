@@ -62,7 +62,6 @@ def personalgrupo(mes, ano):
     merge = merge.round(2)
     columnas = ['cumplimiento_horario_pct', 'discrecion_politicas_pct', 'clima_organizacional_pct', 'cumplimiento_actividades_pct']
     merge = merge.drop(columnas,axis=1)
-    merge['RESULTADO EVALUACION'] = merge['RESULTADO EVALUACION'].apply(lambda x: f'{x * 100}'.replace('.', ',') + '%')
     return merge
 
 @app.route('/')
